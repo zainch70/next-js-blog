@@ -1,9 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { normalizeBlogHtml } from "@/app/lib/html";
-import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import Underline from "@tiptap/extension-underline";
 import StarterKit from "@tiptap/starter-kit";
 import { EditorContent, useEditor } from "@tiptap/react";
 
@@ -19,15 +18,15 @@ export default function RichTextEditor({
   placeholder = "Write your blog content here...",
 }: RichTextEditorProps) {
   const editor = useEditor({
+    immediatelyRender: true,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2] },
-      }),
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true,
+        link: {
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true,
+        },
       }),
       Placeholder.configure({
         placeholder,
@@ -36,8 +35,8 @@ export default function RichTextEditor({
       }),
     ],
     content: normalizeBlogHtml(value || ""),
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+    onUpdate: ({ editor: ed }) => {
+      onChange(ed.getHTML());
     },
     editorProps: {
       attributes: {
@@ -48,15 +47,14 @@ export default function RichTextEditor({
     autofocus: false,
   });
 
-  // Keep editor in sync when switching between posts/editing.
-  // Avoid resetting while user is actively typing.
-  if (editor) {
-    const current = editor.getHTML();
+  useEffect(() => {
+    if (!editor) return;
     const incoming = normalizeBlogHtml(value || "");
-    if (!editor.isFocused && current !== incoming) {
+    if (editor.isFocused) return;
+    if (editor.getHTML() !== incoming) {
       editor.commands.setContent(incoming, { emitUpdate: false });
     }
-  }
+  }, [editor, value]);
 
   const promptForLink = () => {
     if (!editor) return;
