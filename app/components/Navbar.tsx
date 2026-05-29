@@ -1,0 +1,14 @@
+import { auth } from "@/auth";
+import NavbarClient from "./NavbarClient";
+
+export default async function Navbar() {
+  const session = await auth();
+
+  return (
+    <NavbarClient
+      isLoggedIn={!!session?.user}
+      userName={session?.user?.name}
+      userEmail={session?.user?.email}
+    />
+  );
+}
