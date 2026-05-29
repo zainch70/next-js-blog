@@ -19,7 +19,7 @@ export function prepareBlogHtml(html: string): string {
 }
 
 /**
- * Cleans contentEditable / pasted HTML before save or display.
+ * Cleans editor HTML before save or display.
  * Removes empty blocks that cause huge vertical gaps.
  */
 export function normalizeBlogHtml(html: string): string {

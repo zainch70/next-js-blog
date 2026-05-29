@@ -1,7 +1,11 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
 import { normalizeBlogHtml } from "@/app/lib/html";
+import Link from "@tiptap/extension-link";
+import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
+import StarterKit from "@tiptap/starter-kit";
+import { EditorContent, useEditor } from "@tiptap/react";
 
 interface RichTextEditorProps {
   value: string;
@@ -14,81 +18,154 @@ export default function RichTextEditor({
   onChange,
   placeholder = "Write your blog content here...",
 }: RichTextEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null);
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2] },
+      }),
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+      }),
+      Placeholder.configure({
+        placeholder,
+        emptyNodeClass:
+          "is-editor-empty before:content-[attr(data-placeholder)] before:text-muted/50 before:float-left before:pointer-events-none before:h-0",
+      }),
+    ],
+    content: normalizeBlogHtml(value || ""),
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class:
+          "tiptap-editor rich-text-editor min-h-[200px] max-h-[400px] overflow-y-auto p-4 text-sm text-foreground focus:outline-none",
+      },
+    },
+    autofocus: false,
+  });
 
-  useEffect(() => {
-    if (!editorRef.current) return;
-    const prepared = normalizeBlogHtml(value);
-    if (editorRef.current.innerHTML !== prepared) {
-      editorRef.current.innerHTML = prepared;
+  // Keep editor in sync when switching between posts/editing.
+  // Avoid resetting while user is actively typing.
+  if (editor) {
+    const current = editor.getHTML();
+    const incoming = normalizeBlogHtml(value || "");
+    if (!editor.isFocused && current !== incoming) {
+      editor.commands.setContent(incoming, { emitUpdate: false });
     }
-  }, [value]);
+  }
 
-  const exec = useCallback((command: string, arg?: string) => {
-    document.execCommand(command, false, arg);
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+  const promptForLink = () => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("Enter link URL", previousUrl || "https://");
+    if (url === null) return;
+    const next = url.trim();
+    if (!next) {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
     }
-  }, [onChange]);
-
-  const handleInput = () => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
-    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: next }).run();
   };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const html = e.clipboardData.getData("text/html");
-    const plain = e.clipboardData.getData("text/plain");
-
-    if (html) {
-      document.execCommand("insertHTML", false, html);
-    } else if (plain.includes("<") || plain.includes("&lt;")) {
-      document.execCommand("insertHTML", false, normalizeBlogHtml(plain));
-    } else {
-      document.execCommand("insertText", false, plain);
-    }
-    handleInput();
-  };
-
-  const tools = [
-    { label: "B", cmd: "bold", title: "Bold" },
-    { label: "I", cmd: "italic", title: "Italic" },
-    { label: "U", cmd: "underline", title: "Underline" },
-    { label: "H1", cmd: "formatBlock", arg: "h1", title: "Heading 1" },
-    { label: "H2", cmd: "formatBlock", arg: "h2", title: "Heading 2" },
-    { label: "•", cmd: "insertUnorderedList", title: "Bullet list" },
-    { label: "1.", cmd: "insertOrderedList", title: "Numbered list" },
-    { label: "❝", cmd: "formatBlock", arg: "blockquote", title: "Quote" },
-    { label: "🔗", cmd: "createLink", arg: "https://", title: "Link" },
-  ];
 
   return (
     <div className="border border-border rounded-xl overflow-hidden bg-card">
       <div className="flex flex-wrap gap-1 p-2 border-b border-border bg-background">
-        {tools.map((tool) => (
-          <button
-            key={tool.title}
-            type="button"
-            title={tool.title}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => exec(tool.cmd, tool.arg)}
-            className="min-w-8 h-8 px-2 text-xs font-bold text-muted hover:bg-card hover:text-accent rounded-lg border border-transparent hover:border-border transition-all cursor-pointer"
-          >
-            {tool.label}
-          </button>
-        ))}
+        <ToolButton
+          label="B"
+          title="Bold"
+          active={!!editor?.isActive("bold")}
+          onMouseDown={() => editor?.chain().focus().toggleBold().run()}
+        />
+        <ToolButton
+          label="I"
+          title="Italic"
+          active={!!editor?.isActive("italic")}
+          onMouseDown={() => editor?.chain().focus().toggleItalic().run()}
+        />
+        <ToolButton
+          label="U"
+          title="Underline"
+          active={!!editor?.isActive("underline")}
+          onMouseDown={() => editor?.chain().focus().toggleUnderline().run()}
+        />
+        <ToolButton
+          label="H1"
+          title="Heading 1"
+          active={!!editor?.isActive("heading", { level: 1 })}
+          onMouseDown={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+        />
+        <ToolButton
+          label="H2"
+          title="Heading 2"
+          active={!!editor?.isActive("heading", { level: 2 })}
+          onMouseDown={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+        />
+        <ToolButton
+          label="•"
+          title="Bullet list"
+          active={!!editor?.isActive("bulletList")}
+          onMouseDown={() => editor?.chain().focus().toggleBulletList().run()}
+        />
+        <ToolButton
+          label="1."
+          title="Numbered list"
+          active={!!editor?.isActive("orderedList")}
+          onMouseDown={() => editor?.chain().focus().toggleOrderedList().run()}
+        />
+        <ToolButton
+          label="❝"
+          title="Quote"
+          active={!!editor?.isActive("blockquote")}
+          onMouseDown={() => editor?.chain().focus().toggleBlockquote().run()}
+        />
+        <ToolButton
+          label="🔗"
+          title="Link"
+          active={!!editor?.isActive("link")}
+          onMouseDown={promptForLink}
+        />
       </div>
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={handleInput}
-        onPaste={handlePaste}
-        data-placeholder={placeholder}
-        className="min-h-[200px] max-h-[400px] overflow-y-auto p-4 text-sm text-foreground focus:outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-muted/50"
-        suppressContentEditableWarning
-      />
+
+      <EditorContent editor={editor} />
+
+      <p className="px-3 py-1.5 text-[11px] text-muted border-t border-border/60 bg-background">
+        Tip: select text, then apply formatting. Use Enter for new paragraphs.
+      </p>
     </div>
+  );
+}
+
+function ToolButton({
+  label,
+  title,
+  active,
+  onMouseDown,
+}: {
+  label: string;
+  title: string;
+  active: boolean;
+  onMouseDown: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onMouseDown();
+      }}
+      className={[
+        "min-w-8 h-8 px-2 text-xs font-bold rounded-lg border transition-all cursor-pointer",
+        active
+          ? "text-accent border-border bg-card"
+          : "text-muted border-transparent hover:bg-card hover:text-accent hover:border-border",
+      ].join(" ")}
+    >
+      {label}
+    </button>
   );
 }
