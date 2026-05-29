@@ -4,16 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import CoverImage from "./CoverImage";
 import { formatBlogDate } from "@/app/lib/format";
-
-export interface Blog {
-  id: number;
-  heading: string;
-  category?: string | null;
-  tagline: string;
-  imageUrl?: string | null;
-  content: string;
-  createdAt?: Date | null;
-}
+import type { Blog } from "./blogTypes";
 
 interface BlogCardProps {
   blog: Blog;

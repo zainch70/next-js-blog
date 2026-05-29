@@ -1,6 +1,6 @@
 import BlogDashboard from "./BlogDashboard";
 import PageContainer from "./PageContainer";
-import type { Blog } from "./BlogCard";
+import type { Blog } from "./blogTypes";
 
 interface MyBlogsDashboardProps {
   blogs: Blog[];

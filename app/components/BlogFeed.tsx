@@ -1,17 +1,8 @@
-import BlogCard from "./BlogCard";
+import BlogCardView from "./BlogCardView";
 import BlogGrid from "./BlogGrid";
 import PageContainer from "./PageContainer";
 
-export interface BlogFeedItem {
-  id: number;
-  heading: string;
-  category?: string | null;
-  tagline: string;
-  imageUrl?: string | null;
-  content: string;
-  createdAt?: Date | null;
-  authorName: string;
-}
+import type { BlogFeedItem } from "./blogTypes";
 
 interface BlogFeedProps {
   blogs: BlogFeedItem[];
@@ -52,7 +43,7 @@ export default function BlogFeed({
         ) : (
           <BlogGrid>
             {blogs.map((blog) => (
-              <BlogCard
+              <BlogCardView
                 key={blog.id}
                 blog={{
                   id: blog.id,
@@ -63,9 +54,8 @@ export default function BlogFeed({
                   content: blog.content,
                   createdAt: blog.createdAt,
                 }}
-                readOnly
                 authorName={blog.authorName}
-                detailHref={`/page/${blog.id}`}
+                href={`/page/${blog.id}`}
               />
             ))}
           </BlogGrid>

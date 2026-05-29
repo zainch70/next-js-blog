@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBlog, updateBlog, deleteBlog } from "@/app/actions";
 import BlogForm, { type BlogFormData } from "./BlogForm";
-import BlogCard, { type Blog } from "./BlogCard";
+import BlogCard from "./BlogCard";
 import BlogGrid from "./BlogGrid";
 import Toast from "./Toast";
+import type { Blog } from "./blogTypes";
 
 const emptyForm: BlogFormData = {
   heading: "",
